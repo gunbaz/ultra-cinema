@@ -19,11 +19,9 @@ export default function Admin() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-            return;
+        if (token) {
+            fetchData(token);
         }
-        fetchData(token);
     }, []);
 
     const fetchData = async (token) => {

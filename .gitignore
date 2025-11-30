@@ -5,12 +5,25 @@ node_modules/
 
 # Şifrelerin olduğu dosyalar (ASLA YÜKLENMEZ!)
 .env
+.env.local
+.env.*.local
+
+# İşletim sistemi dosyaları
 .DS_Store
+Thumbs.db
 
 # Derleme çıktıları
 dist/
 build/
+*.log
 
 # Yedekler ve SQL Dosyaları
 backups/
 *.sql
+
+# IDE ve editör dosyaları
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

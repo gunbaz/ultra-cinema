@@ -1,30 +1,56 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
+
         try {
-            const response = await axios.post('http://localhost:5000/api/admin/login', { email, password });
+            const response = await axios.post('http://localhost:5000/api/login', { email, password });
             if (response.data.success) {
-                localStorage.setItem('token', response.data.token);
-                alert('Giriş Başarılı! Yönlendiriliyorsunuz...');
-                navigate('/admin');
+                login(response.data.user, response.data.token);
+                
+                // Role göre akıllı yönlendirme
+                // Rol Standartları: role_id = 1 = Super Admin, role_id = 2 = Müşteri
+                const roleId = Number(response.data.user.role_id);
+                if (roleId === 1) {
+                    // Super Admin ise admin paneline yönlendir
+                    navigate('/admin');
+                } else {
+                    // Müşteri veya diğer roller ana sayfaya yönlendir
+                    navigate('/');
+                }
             }
         } catch (err) {
-            alert('Giriş Başarısız: ' + (err.response?.data?.message || err.message));
+            setError(err.response?.data?.message || 'Giriş başarısız. Lütfen tekrar deneyin.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
             <div className="bg-zinc-900 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-800">
-                <h2 className="text-3xl font-bold text-red-600 text-center mb-8">YÖNETİCİ GİRİŞİ</h2>
+                <h2 className="text-3xl font-bold text-red-600 text-center mb-2">GİRİŞ YAP</h2>
+                <p className="text-zinc-400 text-center mb-8 text-sm">Ultra Sinema'ya hoş geldiniz!</p>
+                
+                {error && (
+                    <div className="mb-4 p-3 bg-red-900/50 border border-red-600 rounded-lg text-red-300 text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div>
                         <label className="block text-gray-400 mb-2 text-sm">E-Posta Adresi</label>
@@ -33,7 +59,7 @@ export default function Login() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:border-red-600 focus:outline-none transition"
-                            placeholder="admin@sinema.com"
+                            placeholder="ornek@email.com"
                             required
                         />
                     </div>
@@ -50,13 +76,18 @@ export default function Login() {
                     </div>
                     <button
                         type="submit"
-                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition duration-300"
+                        disabled={loading}
+                        className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition duration-300"
                     >
-                        GİRİŞ YAP
+                        {loading ? 'GİRİŞ YAPILIYOR...' : 'GİRİŞ YAP'}
                     </button>
                 </form>
+                
                 <p className="text-zinc-500 text-center mt-6 text-sm">
-                    © 2024 Ultra Sinema Yönetim Paneli
+                    Hesabınız yok mu?{' '}
+                    <Link to="/register" className="text-red-600 hover:text-red-500 font-semibold">
+                        Kayıt Ol
+                    </Link>
                 </p>
             </div>
         </div>

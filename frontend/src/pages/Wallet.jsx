@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function Wallet() {
     const [wallet, setWallet] = useState(null);
     const [amount, setAmount] = useState('');
-    const userId = 1; // Şimdilik sabit kullanıcı
+    const { user } = useAuth();
+    const userId = user?.user_id;
 
     useEffect(() => {
-        fetchWallet();
-    }, []);
+        if (userId) {
+            fetchWallet();
+        }
+    }, [userId]);
 
     const fetchWallet = async () => {
         try {
