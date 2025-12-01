@@ -293,7 +293,13 @@ app.get('/api/products', async (req, res) => {
 });
 
 app.post('/api/tickets', async (req, res) => {
-    const { movieId, selectedSeats } = req.body;
+    const { movieId, selectedSeats, userId } = req.body;
+    
+    // userId kontrolü
+    if (!userId) {
+        return res.status(400).json({ message: 'Kullanıcı ID gerekli' });
+    }
+    
     try {
         const sessionRes = await pool.query('SELECT session_id, base_price FROM Sessions WHERE movie_id = $1 LIMIT 1', [movieId]);
         if (sessionRes.rows.length === 0) return res.status(404).json({ message: 'Seans yok' });
@@ -304,7 +310,7 @@ app.post('/api/tickets', async (req, res) => {
             const number = seatLabel.slice(1);
             const seatRes = await pool.query('SELECT seat_id FROM Seats WHERE row_label = $1 AND seat_number = $2 LIMIT 1', [row, number]);
             if (seatRes.rows.length > 0) {
-                await pool.query('INSERT INTO Tickets (user_id, session_id, seat_id, price_paid, payment_method, booking_code) VALUES ($1, $2, $3, $4, $5, $6)', [1, session_id, seatRes.rows[0].seat_id, base_price, 'CREDIT_CARD', 'PNR-' + Date.now()]);
+                await pool.query('INSERT INTO Tickets (user_id, session_id, seat_id, price_paid, payment_method, booking_code) VALUES ($1, $2, $3, $4, $5, $6)', [userId, session_id, seatRes.rows[0].seat_id, base_price, 'CREDIT_CARD', 'PNR-' + Date.now() + Math.floor(Math.random() * 1000)]);
             }
         }
         res.json({ success: true });

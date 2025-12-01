@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -7,10 +7,11 @@ import { API_URL } from '../config/api';
 const ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const COLS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-// StarRating Bileşeni - Overlay (Katman) Mantığı ile Hassas Gösterim
+// StarRating Bileşeni - SVG Linear Gradient ile Kısmi Doluluk Desteği
 const StarRating = ({ rating = 0, interactive = false, onChange, size = 'text-2xl' }) => {
     const [hoveredStar, setHoveredStar] = useState(0);
     const [displayRating, setDisplayRating] = useState(rating);
+    const uniqueId = useId(); // Her bileşen için benzersiz ID
 
     useEffect(() => {
         setDisplayRating(rating);
@@ -32,21 +33,6 @@ const StarRating = ({ rating = 0, interactive = false, onChange, size = 'text-2x
 
     const containerSize = getSizeClasses();
 
-    // Yıldız SVG'si (sabit, tekrar kullanılabilir)
-    const StarSVG = () => (
-        <svg
-            className="w-full h-full"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path
-                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                fill="currentColor"
-            />
-        </svg>
-    );
-
     const handleStarClick = (starIndex) => {
         if (interactive && onChange) {
             onChange(starIndex);
@@ -67,6 +53,7 @@ const StarRating = ({ rating = 0, interactive = false, onChange, size = 'text-2x
     };
 
     // Her yıldız için doluluk yüzdesini hesapla
+    // Formül: Math.min(100, Math.max(0, (rating - index) * 100))
     const getStarFillPercentage = (index) => {
         if (interactive) {
             // İnteraktif mod: hover veya seçili puan
@@ -74,14 +61,41 @@ const StarRating = ({ rating = 0, interactive = false, onChange, size = 'text-2x
             if (index <= activeRating) return 100;
             return 0;
         } else {
-            // Gösterim modu: hassas puan gösterimi
-            if (index <= Math.floor(displayRating)) return 100;
-            if (index === Math.ceil(displayRating) && displayRating % 1 !== 0) {
-                // Kısmi yıldız: ondalık kısmı yüzdeye çevir
-                return (displayRating % 1) * 100;
-            }
-            return 0;
+            // Gösterim modu: hassas puan gösterimi (kısmi doluluk)
+            // index 0-based değil, 1-based (1, 2, 3, 4, 5)
+            // rating 3.3 ise: index 1,2,3 = 100%, index 4 = 30%, index 5 = 0%
+            const fillPercent = Math.min(100, Math.max(0, (displayRating - (index - 1)) * 100));
+            return fillPercent;
         }
+    };
+
+    // Yıldız SVG'si - Linear Gradient ile kısmi doluluk
+    const StarSVG = ({ index, fillPercentage }) => {
+        const gradientId = `star-grad-${uniqueId}-${index}`;
+        const isFilled = fillPercentage > 0;
+        const isPartial = fillPercentage > 0 && fillPercentage < 100;
+
+        return (
+            <svg
+                className={`${containerSize} transition-all duration-200`}
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <defs>
+                    <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset={`${fillPercentage}%`} stopColor="#fbbf24" />
+                        <stop offset={`${fillPercentage}%`} stopColor="#3f3f46" />
+                    </linearGradient>
+                </defs>
+                <path
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                    fill={isFilled ? `url(#${gradientId})` : '#3f3f46'}
+                    stroke={isFilled ? '#fbbf24' : '#3f3f46'}
+                    strokeWidth="0.5"
+                />
+            </svg>
+        );
     };
 
     return (
@@ -97,20 +111,9 @@ const StarRating = ({ rating = 0, interactive = false, onChange, size = 'text-2x
                         key={starIndex}
                         onClick={() => handleStarClick(starIndex)}
                         onMouseEnter={() => handleStarHover(starIndex)}
-                        className={`relative ${containerSize} ${interactive ? 'cursor-pointer transform hover:scale-110 transition-transform' : ''}`}
+                        className={interactive ? 'cursor-pointer transform hover:scale-110 transition-transform' : ''}
                     >
-                        {/* Altta: Gri yıldız (sabit) */}
-                        <div className="absolute inset-0 text-zinc-700">
-                            <StarSVG />
-                        </div>
-                        
-                        {/* Üstte: Sarı yıldız (width ile kontrol ediliyor) */}
-                        <div 
-                            className="absolute inset-0 text-yellow-400 overflow-hidden"
-                            style={{ width: `${fillPercentage}%` }}
-                        >
-                            <StarSVG />
-                        </div>
+                        <StarSVG index={starIndex} fillPercentage={fillPercentage} />
                     </div>
                 );
             })}
@@ -195,7 +198,11 @@ export default function Reservation() {
 
         if (!confirm('Kredi Kartı ile ödemeyi onaylıyor musunuz?')) return;
         try {
-            await axios.post(`${API_URL}/api/tickets`, { movieId: id, selectedSeats });
+            await axios.post(`${API_URL}/api/tickets`, { 
+                movieId: id, 
+                selectedSeats,
+                userId: userId 
+            });
             alert('Bilet Alındı! (Kredi Kartı)');
             navigate('/');
         } catch (err) {
