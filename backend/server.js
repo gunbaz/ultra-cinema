@@ -872,3 +872,8 @@ cron.schedule('0 3 * * *', async () => {
     // Şimdilik sadece log
     console.log('ℹ️ Cloud ortamında otomatik yedekleme devre dışı. Manuel yedekleme kullanın.');
 });
+// Backend başladığında seed çalıştır
+createReviewsTable();
+seedProducts();
+
+app.listen(PORT, () => console.log(`🚀 Sunucu ${PORT} portunda çalışıyor...`));
