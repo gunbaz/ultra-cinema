@@ -139,14 +139,14 @@ const verifyAdmin = async (req, res, next) => {
         }
 
         const user = userRes.rows[0];
-        
+
         // Super Admin kontrolü - KESİN GÜVENLİK
         // Rol Standartları:
         // role_id = 1 = Super Admin (Sadece veritabanından elle atanır)
         // role_id = 2 = Müşteri (Varsayılan kayıt rolü)
         // Sadece role_id === 1 olanlar geçebilir
         const isSuperAdmin = user.role_id === 1;
-        
+
         if (!isSuperAdmin) {
             console.log(`🚫 Yetkisiz Admin Erişim Denemesi - User ID: ${userId}, Role ID: ${user.role_id}, Role Name: ${user.role_name}`);
             return res.status(403).json({ message: 'Yetkiniz Yok! Bu işlem için Super Admin yetkisi gereklidir.' });
@@ -183,7 +183,7 @@ app.get('/api/movies/:id', async (req, res) => {
 app.get('/api/movies/:id/reviews', async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // Yorumları kullanıcı bilgileriyle birlikte getir
         const reviewsResult = await pool.query(`
             SELECT 
@@ -233,8 +233,8 @@ app.post('/api/reviews', async (req, res) => {
         `, [userId, movieId]);
 
         if (parseInt(ticketCheck.rows[0].ticket_count) === 0) {
-            return res.status(403).json({ 
-                message: 'Bu filmi izlediğinize dair bilet kaydı bulunamadı. Yorum yapmak için önce bilet almalısınız.' 
+            return res.status(403).json({
+                message: 'Bu filmi izlediğinize dair bilet kaydı bulunamadı. Yorum yapmak için önce bilet almalısınız.'
             });
         }
 
@@ -250,7 +250,7 @@ app.post('/api/reviews', async (req, res) => {
                 SET rating = $1, comment = $2, created_at = CURRENT_TIMESTAMP
                 WHERE review_id = $3
             `, [rating, comment, existingReview.rows[0].review_id]);
-            
+
             res.json({ success: true, message: 'Yorumunuz güncellendi' });
         } else {
             // Yeni yorum ekle
@@ -258,7 +258,7 @@ app.post('/api/reviews', async (req, res) => {
                 INSERT INTO Reviews (user_id, movie_id, rating, comment)
                 VALUES ($1, $2, $3, $4)
             `, [userId, movieId, rating, comment]);
-            
+
             res.json({ success: true, message: 'Yorumunuz başarıyla eklendi' });
         }
     } catch (err) {
@@ -294,12 +294,12 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/tickets', async (req, res) => {
     const { movieId, selectedSeats, userId } = req.body;
-    
+
     // userId kontrolü
     if (!userId) {
         return res.status(400).json({ message: 'Kullanıcı ID gerekli' });
     }
-    
+
     try {
         const sessionRes = await pool.query('SELECT session_id, base_price FROM Sessions WHERE movie_id = $1 LIMIT 1', [movieId]);
         if (sessionRes.rows.length === 0) return res.status(404).json({ message: 'Seans yok' });
@@ -354,9 +354,9 @@ app.post('/api/register', async (req, res) => {
         `, [newUser.user_id]);
 
         await client.query('COMMIT');
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'Kayıt başarılı! Giriş yapabilirsiniz.',
             user: {
                 user_id: newUser.user_id,
@@ -406,14 +406,14 @@ app.post('/api/login', async (req, res) => {
 
         console.log('✅ Giriş Başarılı, Token Üretiliyor...');
         const fullName = `${user.first_name} ${user.last_name}`;
-        const token = jwt.sign({ 
-            userId: user.user_id, 
+        const token = jwt.sign({
+            userId: user.user_id,
             role: user.role_name,
             fullName: fullName
         }, JWT_SECRET, { expiresIn: '24h' });
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             token,
             user: {
                 user_id: user.user_id,
@@ -424,7 +424,7 @@ app.post('/api/login', async (req, res) => {
                 role: user.role_name,
                 fullName: fullName
             },
-            message: 'Giriş başarılı' 
+            message: 'Giriş başarılı'
         });
 
     } catch (err) {
@@ -622,7 +622,7 @@ app.post('/api/wallet/deposit', async (req, res) => {
 
 // 3. Cüzdanla Bilet + Büfe Satın Alma (%10 İndirimli)
 app.post('/api/tickets/buy-with-wallet', async (req, res) => {
-    const { userId, movieId, selectedSeats, products } = req.body; 
+    const { userId, movieId, selectedSeats, products } = req.body;
     // selectedSeats: ['A1', 'B2']
     // products: [{productId: 1, quantity: 2}, {productId: 2, quantity: 1}]
     const client = await pool.connect();
@@ -648,13 +648,13 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
                     'SELECT product_id, product_name, price, stock_quantity FROM Products WHERE product_id = $1 AND is_active = true',
                     [item.productId]
                 );
-                
+
                 if (productRes.rows.length === 0) {
                     throw new Error(`Ürün bulunamadı: ${item.productId}`);
                 }
 
                 const product = productRes.rows[0];
-                
+
                 // Stok kontrolü
                 if (product.stock_quantity < item.quantity) {
                     throw new Error(`Yetersiz stok: ${product.product_name}`);
@@ -662,7 +662,7 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
 
                 const itemTotal = parseFloat(product.price) * item.quantity;
                 productTotal += itemTotal;
-                
+
                 productDetails.push({
                     productId: product.product_id,
                     name: product.product_name,
@@ -690,10 +690,10 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
         await client.query('UPDATE Wallets SET balance = balance - $1 WHERE wallet_id = $2', [discountedAmount, wallet.wallet_id]);
 
         // 6. İşlem Kaydı (Bilet + Büfe)
-        const description = productDetails.length > 0 
+        const description = productDetails.length > 0
             ? `${seatCount} bilet + ${productDetails.map(p => `${p.quantity}x ${p.name}`).join(', ')} (Film ID: ${movieId})`
             : `${seatCount} adet bilet alımı (Film ID: ${movieId})`;
-            
+
         await client.query(
             'INSERT INTO Wallet_Transactions (wallet_id, amount, transaction_type, description) VALUES ($1, $2, $3, $4)',
             [wallet.wallet_id, discountedAmount, 'PURCHASE', description]
@@ -701,7 +701,7 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
 
         // 7. Biletleri Oluştur
         const discountedTicketPrice = (ticketTotal * 0.90) / seatCount; // Her bilet için indirimli fiyat
-        
+
         for (const seatLabel of selectedSeats) {
             const row = seatLabel.charAt(0);
             const number = seatLabel.slice(1);
@@ -731,11 +731,11 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.json({ 
-            success: true, 
-            message: productDetails.length > 0 
-                ? 'Biletler ve büfe ürünleri başarıyla alındı' 
-                : 'Biletler başarıyla alındı', 
+        res.json({
+            success: true,
+            message: productDetails.length > 0
+                ? 'Biletler ve büfe ürünleri başarıyla alındı'
+                : 'Biletler başarıyla alındı',
             newBalance: parseFloat(wallet.balance) - discountedAmount,
             ticketTotal: ticketTotal * 0.90,
             productTotal: productTotal * 0.90,
@@ -750,59 +750,125 @@ app.post('/api/tickets/buy-with-wallet', async (req, res) => {
     }
 });
 
-// --- YEDEKLEME SİSTEMİ ---
+// ============================================
+// 🔄 YENİ YEDEKLEME SİSTEMİ (Render.com Uyumlu)
+// ============================================
+// Bu kodu server.js'deki eski yedekleme sistemi yerine yapıştır
 
-const backupDatabase = () => {
-    const backupDir = path.join(__dirname, 'backups');
-    if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir);
-    }
+// --- YEDEKLEME SİSTEMİ (Cloud Uyumlu) ---
 
-    const date = new Date();
-    const formattedDate = date.toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + date.getHours() + '-' + date.getMinutes();
-    const fileName = `backup_${formattedDate}.sql`;
-    const filePath = path.join(backupDir, fileName);
+// Tüm tabloları sırayla yedekle (foreign key sırasına göre)
+const BACKUP_TABLES = [
+    'roles',
+    'cities',
+    'genres',
+    'directors',
+    'actors',
+    'users',
+    'wallets',
+    'cinemas',
+    'halls',
+    'seattypes',
+    'seats',
+    'movies',
+    'movie_genres',
+    'movie_directors',
+    'movie_actors',
+    'sessions',
+    'tickets',
+    'products',
+    'sales',
+    'reviews',
+    'wallet_transactions'
+];
 
-    // 1. pg_dump Tam Yolu (Windows için)
-    const pgDumpPath = `"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe"`;
-
-    // 2. Komut Yapısı (Redirection > kullanarak)
-    const command = `${pgDumpPath} -U ${process.env.DB_USER || 'postgres'} -h ${process.env.DB_HOST || 'localhost'} -p ${process.env.DB_PORT || 5432} ${process.env.DB_NAME || 'CinemaDB'} > "${filePath}"`;
-
-    // 3. Env ile şifre (exec options içinde)
-    exec(command, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`❌ Yedekleme Hatası: ${error.message}`);
-            return;
-        }
-        // pg_dump bazen stderr'e bilgi basar, bu bir hata olmayabilir
-        if (stderr) {
-            console.log(`ℹ️ Yedekleme Bilgisi: ${stderr}`);
-        }
-        console.log(`✅ Veritabanı Yedeği Alındı: ${fileName}`);
-    });
-
-    return fileName;
+// SQL değerlerini güvenli hale getir
+const escapeValue = (val) => {
+    if (val === null || val === undefined) return 'NULL';
+    if (typeof val === 'number') return val;
+    if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+    if (val instanceof Date) return `'${val.toISOString()}'`;
+    // String escape
+    const escaped = String(val).replace(/'/g, "''");
+    return `'${escaped}'`;
 };
 
-// Manuel Yedekleme Tetikleyici (Admin)
-app.get('/api/admin/backup', authenticateToken, verifyAdmin, (req, res) => {
+// Tek bir tablo için INSERT statement'ları oluştur
+const generateTableInserts = async (tableName, pool) => {
     try {
-        const fileName = backupDatabase();
-        res.json({ success: true, message: 'Yedekleme işlemi başlatıldı.', fileName });
+        const result = await pool.query(`SELECT * FROM ${tableName}`);
+
+        if (result.rows.length === 0) {
+            return `-- ${tableName}: Boş tablo\n`;
+        }
+
+        const columns = Object.keys(result.rows[0]);
+        let sql = `-- ${tableName}: ${result.rows.length} kayıt\n`;
+
+        for (const row of result.rows) {
+            const values = columns.map(col => escapeValue(row[col]));
+            sql += `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${values.join(', ')});\n`;
+        }
+
+        return sql + '\n';
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return `-- ${tableName}: HATA - ${err.message}\n\n`;
+    }
+};
+
+// Ana backup fonksiyonu - SQL string döndürür
+const generateSqlBackup = async (pool) => {
+    const date = new Date();
+    const timestamp = date.toISOString().replace(/[:.]/g, '-');
+
+    let sqlContent = `-- =============================================\n`;
+    sqlContent += `-- ULTRA CINEMA PLATFORM - VERİTABANI YEDEĞİ\n`;
+    sqlContent += `-- Tarih: ${date.toLocaleString('tr-TR')}\n`;
+    sqlContent += `-- =============================================\n\n`;
+
+    sqlContent += `-- Önce mevcut verileri temizle (opsiyonel)\n`;
+    sqlContent += `-- TRUNCATE ${BACKUP_TABLES.slice().reverse().join(', ')} CASCADE;\n\n`;
+
+    sqlContent += `-- =============================================\n`;
+    sqlContent += `-- VERİLER\n`;
+    sqlContent += `-- =============================================\n\n`;
+
+    for (const table of BACKUP_TABLES) {
+        console.log(`📦 Yedekleniyor: ${table}`);
+        sqlContent += await generateTableInserts(table, pool);
+    }
+
+    sqlContent += `-- =============================================\n`;
+    sqlContent += `-- YEDEKLEME TAMAMLANDI\n`;
+    sqlContent += `-- =============================================\n`;
+
+    return { content: sqlContent, timestamp };
+};
+
+// Manuel Yedekleme Endpoint'i (Admin) - ESKİ ENDPOINT'İ BU İLE DEĞİŞTİR
+app.get('/api/admin/backup', authenticateToken, verifyAdmin, async (req, res) => {
+    try {
+        console.log('🔄 Yedekleme başlatılıyor...');
+
+        const { content, timestamp } = await generateSqlBackup(pool);
+        const fileName = `ultra_cinema_backup_${timestamp}.sql`;
+
+        // SQL dosyasını direkt indir
+        res.setHeader('Content-Type', 'application/sql');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.send(content);
+
+        console.log(`✅ Yedekleme tamamlandı: ${fileName}`);
+    } catch (err) {
+        console.error('❌ Yedekleme hatası:', err);
+        res.status(500).json({ success: false, message: 'Yedekleme hatası: ' + err.message });
     }
 });
 
-// Otomatik Yedekleme (Her gece 03:00)
-cron.schedule('0 3 * * *', () => {
-    console.log('🕒 Otomatik Yedekleme Başlatılıyor...');
-    backupDatabase();
+// Otomatik Yedekleme - Cloud'da log'a yaz (dosya sistemi yok)
+cron.schedule('0 3 * * *', async () => {
+    console.log('🕒 Otomatik Yedekleme Kontrolü...');
+    // Cloud ortamında otomatik yedekleme için external servis kullanılmalı
+    // Şimdilik sadece log
+    console.log('ℹ️ Cloud ortamında otomatik yedekleme devre dışı. Manuel yedekleme kullanın.');
 });
-
-// Backend başladığında seed çalıştır (pool tanımlandıktan sonra)
-createReviewsTable();
-seedProducts();
-
-app.listen(PORT, () => console.log(`🚀 Sunucu ${PORT} portunda çalışıyor...`));

@@ -1,0 +1,58 @@
+# Project Context: Ultra Cinema Platform (Full Stack)
+
+You are an expert Full Stack Developer specializing in the PERN stack (PostgreSQL, Express, React, Node.js). You are assisting in building a professional cinema reservation system.
+
+## 🛠️ Tech Stack & Tools
+- **Frontend:** React.js (Vite), Tailwind CSS, React Router DOM, Axios, Lucide React (Icons).
+- **Backend:** Node.js, Express.js, node-postgres (pg).
+- **Database:** PostgreSQL (Relational DB).
+- **Security:** JWT (JSON Web Token), Bcrypt, RBAC (Role-Based Access Control).
+- **Deployment:** Vercel (Frontend), Render (Backend & DB).
+- **Package Manager:** npm.
+
+## 🗄️ Database Schema Summary
+- **Users:** user_id, role_id (1:Admin, 2:Customer), email, password_hash, etc.
+- **Roles:** 1=Super Admin, 2=Müşteri.
+- **Movies:** Title, duration, poster, etc.
+- **Sessions:** movie_id, hall_id, datetime, base_price.
+- **Seats:** Row/Number logic.
+- **Tickets:** user_id, session_id, seat_id, payment_method (WALLET/CREDIT_CARD).
+- **Wallets:** user_id, balance.
+- **Wallet_Transactions:** History of deposits and purchases.
+- **Products:** Buffet items (Popcorn, Coke).
+- **Sales:** Buffet sales records.
+- **Reviews:** User ratings and comments (Verified purchase only).
+
+## 🧠 Coding Principles & Rules
+
+### 1. General Behavior
+- **Language:** Communicate in **Turkish** (Türkçe).
+- **Vibe Coding:** Focus on high-level logic and complete solutions. When using Composer, provide full file updates or precise edits.
+- **Explanation:** Explain *why* you are making a change before showing the code.
+- **Simplicity:** Keep solutions simple and readable. Avoid over-engineering.
+
+### 2. Frontend Rules (React)
+- Use **Functional Components** with Hooks.
+- Use **Tailwind CSS** for styling. Stick to the "Dark Mode / Netflix-Style" theme (Black background, Red accents, Zinc/Gray texts).
+- Always handle `loading` and `error` states in UI.
+- Use `axios` for API calls and use the `VITE_API_URL` environment variable.
+- **Security:** Protect Admin routes using `AdminRoute` component.
+
+### 3. Backend Rules (Node.js)
+- **Architecture:** Keep it somewhat monolithic in `server.js` for simplicity, but organize routes logically.
+- **Security:** Always use `authenticateToken` for protected routes. Use `verifyAdmin` for sensitive operations.
+- **Database:** Use Parameterized Queries (`$1`, `$2`) to prevent SQL Injection.
+- **Business Logic:**
+  - **Wallet:** Apply 10% discount when paying with Wallet.
+  - **Transactions:** Always use `BEGIN`, `COMMIT`, and `ROLLBACK` for financial operations (Tickets + Wallet).
+  - **Reviews:** Check if the user has a ticket for the movie before allowing a review.
+
+### 4. Critical Business Logic (Don't Forget!)
+- **Role IDs:** Admin ID is always **1**, Customer ID is **2**.
+- **Backup:** The system runs a cron job at 03:00 AM to backup the DB to `/backups`.
+- **Validation:** Never allow ticket sales for already occupied seats.
+
+## 📝 Style Guide
+- Use consistent variable naming (camelCase for JS, snake_case for DB columns).
+- Add comments in Turkish for complex logic blocks.
+- When fixing a bug, first analyze the root cause, then propose a fix.
